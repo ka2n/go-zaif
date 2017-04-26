@@ -4,16 +4,16 @@ import (
 	"crypto/hmac"
 	"crypto/sha512"
 	"encoding/hex"
-	"github.com/google/go-querystring/query"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/google/go-querystring/query"
 )
 
 const privateEndPointURL = "https://api.zaif.jp/tapi"
-
-var initialNonce = 0
 
 // PrivateAPI API有効にした際の キー,シークレットキー を設定
 type PrivateAPI struct {
@@ -102,14 +102,14 @@ func NewPrivateAPI(key string, secret string) *PrivateAPI {
 // TradingParam 全リクエストで使用するparams
 type TradingParam struct {
 	Method string `url:"method"`
-	Nonce  int    `url:"nonce"`
+	Nonce  string `url:"nonce"`
 }
 
 // NewTradingParam To make TradingParam
 func NewTradingParam(method string) TradingParam {
 	return TradingParam{
 		Method: method,
-		Nonce:  getNonceWithIncr(),
+		Nonce:  newNonce(),
 	}
 }
 
@@ -121,10 +121,9 @@ func MakeSign(message string, secret string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// getNonceWithIncr nonce取得
-func getNonceWithIncr() int {
-	initialNonce++
-	return (int(time.Now().Unix())-1420070400)*30 + (initialNonce % 30)
+// newNonce nonce取得
+func newNonce() string {
+	return fmt.Sprintf("%.6f", float64(time.Now().UnixNano())/float64(time.Second)-1420070400)
 }
 
 // Post API送信
