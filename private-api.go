@@ -21,8 +21,8 @@ type PrivateAPI struct {
 	Secret string //
 }
 
-// BodyActiveOrders Params of ActiveOrders
-type BodyActiveOrders struct {
+// ActiveOrdersRequest Params of ActiveOrders
+type ActiveOrdersRequest struct {
 	From         int    `url:"from,omitempty"`
 	Count        int    `url:"count,omitempty"`
 	FromID       int    `url:"from_id,omitempty"`
@@ -33,8 +33,8 @@ type BodyActiveOrders struct {
 	CurrencyPair string `url:"currency_pair,omitempty"`
 }
 
-// BodyTrade Params of Trade
-type BodyTrade struct {
+// TradeRequest Params of Trade
+type TradeRequest struct {
 	CurrencyPair string  `url:"currency_pair"`
 	Action       string  `url:"action"`
 	Price        int     `url:"price"`
@@ -42,21 +42,21 @@ type BodyTrade struct {
 	Limit        bool    `url:"limit,omitempty"`
 }
 
-// BodyCancel Params of Cancel
-type BodyCancel struct {
+// CancelRequest Params of Cancel
+type CancelRequest struct {
 	OrderID int `url:"order_id"`
 }
 
-// BodyWithdraw Params of Withdraw
-type BodyWithdraw struct {
+// WithdrawRequest Params of Withdraw
+type WithdrawRequest struct {
 	Currency string  `url:"currency"`
 	Address  string  `url:"address"`
 	Amount   float32 `url:"amount"`
 	OptFee   float32 `url:"opt_fee,omitempty"`
 }
 
-// BodyTradeHistory Params of TradeHistory
-type BodyTradeHistory struct {
+// TradeHistoryRequest Params of TradeHistory
+type TradeHistoryRequest struct {
 	From         int    `url:"from,omitempty"`
 	Count        int    `url:"count,omitempty"`
 	FromID       int    `url:"from_id,omitempty"`
@@ -67,8 +67,8 @@ type BodyTradeHistory struct {
 	CurrencyPair string `url:"currency_pair,omitempty"`
 }
 
-// BodyDepositHistory Params of DepositHistory()
-type BodyDepositHistory struct {
+// DepositHistoryRequest Params of DepositHistory()
+type DepositHistoryRequest struct {
 	From     int    `url:"from,omitempty"`
 	Count    int    `url:"count,omitempty"`
 	FromID   int    `url:"from_id,omitempty"`
@@ -79,8 +79,8 @@ type BodyDepositHistory struct {
 	Currency string `url:"currency"`
 }
 
-// BodyWithdrawHistory Params of WithdrawHistory()
-type BodyWithdrawHistory struct {
+// WithdrawHistoryRequest Params of WithdrawHistory()
+type WithdrawHistoryRequest struct {
 	From     int    `url:"from,omitempty"`
 	Count    int    `url:"count,omitempty"`
 	FromID   int    `url:"from_id,omitempty"`
@@ -170,7 +170,7 @@ func (api *PrivateAPI) GetInfo() (string, error) {
 }
 
 // ActiveOrders 現在有効な注文一覧を取得
-func (api *PrivateAPI) ActiveOrders(body BodyActiveOrders) (string, error) {
+func (api *PrivateAPI) ActiveOrders(body ActiveOrdersRequest) (string, error) {
 	v, err := query.Values(body)
 	if err != nil {
 		return "", err
@@ -182,7 +182,7 @@ func (api *PrivateAPI) ActiveOrders(body BodyActiveOrders) (string, error) {
 }
 
 // Trade 注文
-func (api *PrivateAPI) Trade(body BodyTrade) (string, error) {
+func (api *PrivateAPI) Trade(body TradeRequest) (string, error) {
 	v, err := query.Values(body)
 	if err != nil {
 		return "", err
@@ -194,7 +194,7 @@ func (api *PrivateAPI) Trade(body BodyTrade) (string, error) {
 }
 
 // Cancel 注文キャンセル
-func (api *PrivateAPI) Cancel(body BodyCancel) (string, error) {
+func (api *PrivateAPI) Cancel(body CancelRequest) (string, error) {
 	v, err := query.Values(body)
 	if err != nil {
 		return "", err
@@ -206,7 +206,7 @@ func (api *PrivateAPI) Cancel(body BodyCancel) (string, error) {
 }
 
 // Withdraw 資金の引き出しリクエストを送信
-func (api *PrivateAPI) Withdraw(body BodyWithdraw) (string, error) {
+func (api *PrivateAPI) Withdraw(body WithdrawRequest) (string, error) {
 	v, err := query.Values(body)
 	if err != nil {
 		return "", err
@@ -218,7 +218,7 @@ func (api *PrivateAPI) Withdraw(body BodyWithdraw) (string, error) {
 }
 
 // DepositHistory 入金履歴を取得
-func (api *PrivateAPI) DepositHistory(body BodyDepositHistory) (string, error) {
+func (api *PrivateAPI) DepositHistory(body DepositHistoryRequest) (string, error) {
 	v, err := query.Values(body)
 	if err != nil {
 		return "", err
@@ -230,7 +230,7 @@ func (api *PrivateAPI) DepositHistory(body BodyDepositHistory) (string, error) {
 }
 
 // WithdrawHistory 出金履歴を取得
-func (api *PrivateAPI) WithdrawHistory(body BodyWithdrawHistory) (string, error) {
+func (api *PrivateAPI) WithdrawHistory(body WithdrawHistoryRequest) (string, error) {
 	v, err := query.Values(body)
 	if err != nil {
 		return "", err
