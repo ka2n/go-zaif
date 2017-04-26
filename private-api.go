@@ -18,8 +18,9 @@ const privateEndPointURL = "https://api.zaif.jp/tapi"
 
 // PrivateAPI API有効にした際の キー,シークレットキー を設定
 type PrivateAPI struct {
-	Key    string //
-	Secret string //
+	Key        string
+	Secret     string
+	HTTPClient *http.Client
 }
 
 // ActiveOrdersRequest Params of ActiveOrders
@@ -95,8 +96,9 @@ type WithdrawHistoryRequest struct {
 // NewPrivateAPI To use PrivateAPI
 func NewPrivateAPI(key string, secret string) *PrivateAPI {
 	return &PrivateAPI{
-		Key:    key,
-		Secret: secret,
+		Key:        key,
+		Secret:     secret,
+		HTTPClient: http.DefaultClient,
 	}
 }
 
@@ -151,7 +153,7 @@ func (api *PrivateAPI) Do(method string, param interface{}, out interface{}) err
 	req.Header.Add("Key", api.Key)
 	req.Header.Add("Sign", makeSign(encodedParams, api.Secret))
 
-	client := http.DefaultClient
+	client := api.HTTPClient
 	res, err := client.Do(req)
 	if err != nil {
 		return err
