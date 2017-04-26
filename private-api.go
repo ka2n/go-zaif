@@ -145,7 +145,7 @@ func (api *PrivateAPI) Post(tradingParam TradingParam, parameter string) (string
 	req.Header.Add("Key", api.Key)
 	req.Header.Add("Sign", makeSign(encodedParams, api.Secret))
 
-	client := &http.Client{}
+	client := http.DefaultClient
 	res, err := client.Do(req)
 	if err != nil {
 		return "", err
