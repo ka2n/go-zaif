@@ -183,18 +183,18 @@ type apiResponse struct {
 
 type GetInfoResponse struct {
 	Deposit struct {
-		Btc   float64 `json:"btc"`
-		Jpy   int     `json:"jpy"`
+		BTC   float64 `json:"btc"`
+		JPY   float64 `json:"jpy"`
 		Kaori float64 `json:"kaori"`
-		Mona  int     `json:"mona"`
-		Xem   float64 `json:"xem"`
+		MONA  float64 `json:"mona"`
+		XEM   float64 `json:"xem"`
 	} `json:"deposit"`
 	Funds struct {
-		Btc   float64 `json:"btc"`
-		Jpy   int     `json:"jpy"`
+		BTC   float64 `json:"btc"`
+		JPY   float64 `json:"jpy"`
 		Kaori float64 `json:"kaori"`
-		Mona  int     `json:"mona"`
-		Xem   float64 `json:"xem"`
+		MONA  float64 `json:"mona"`
+		XEM   float64 `json:"xem"`
 	} `json:"funds"`
 	OpenOrders int `json:"open_orders"`
 	Rights     struct {
@@ -264,9 +264,9 @@ type TradeResponse struct {
 	Remains  int     `json:"remains"`
 	OrderID  int     `json:"order_id"`
 	Funds    struct {
-		Jpy  int     `json:"jpy"`
-		Btc  float64 `json:"btc"`
-		Mona int     `json:"mona"`
+		JPY  float64 `json:"jpy"`
+		BTC  float64 `json:"btc"`
+		MONA float64 `json:"mona"`
 	} `json:"funds"`
 }
 
@@ -289,10 +289,10 @@ func (api *PrivateAPI) Trade(ctx context.Context, param TradeRequest) (*TradeRes
 
 type CancelResponse struct {
 	Funds struct {
-		Btc   float64 `json:"btc"`
-		Jpy   int     `json:"jpy"`
+		BTC   float64 `json:"btc"`
+		JPY   float64 `json:"jpy"`
 		Kaori float64 `json:"kaori"`
-		Mona  int     `json:"mona"`
+		MONA  float64 `json:"mona"`
 	} `json:"funds"`
 	OrderID int `json:"order_id"`
 }
@@ -317,10 +317,10 @@ func (api *PrivateAPI) Cancel(ctx context.Context, param CancelRequest) (*Cancel
 type WithdrawResponse struct {
 	Txid  string `json:"txid"`
 	Funds struct {
-		Jpy  int     `json:"jpy"`
-		Btc  float64 `json:"btc"`
-		Xem  float64 `json:"xem"`
-		Mona int     `json:"mona"`
+		JPY  float64 `json:"jpy"`
+		BTC  float64 `json:"btc"`
+		XEM  float64 `json:"xem"`
+		MONA float64 `json:"mona"`
 	} `json:"funds"`
 }
 
