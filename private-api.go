@@ -1,6 +1,7 @@
 package zaif
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha512"
 	"encoding/hex"
@@ -130,7 +131,7 @@ func newNonce() string {
 }
 
 // Do API送信
-func (api *PrivateAPI) Do(method string, param interface{}, out interface{}) error {
+func (api *PrivateAPI) Do(ctx context.Context, method string, param interface{}, out interface{}) error {
 	v, err := query.Values(newTradingParam(method))
 	if err != nil {
 		return err
@@ -149,6 +150,9 @@ func (api *PrivateAPI) Do(method string, param interface{}, out interface{}) err
 	if err != nil {
 		return err
 	}
+
+	req = req.WithContext(ctx)
+
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Add("Key", api.Key)
 	req.Header.Add("Sign", makeSign(encodedParams, api.Secret))
@@ -210,9 +214,9 @@ type getInfoAPIResponse struct {
 }
 
 // GetInfo 現在の残高（余力および残高）、APIキーの権限、過去のトレード数、アクティブな注文数、サーバーのタイムスタンプを取得
-func (api *PrivateAPI) GetInfo() (*GetInfoResponse, error) {
+func (api *PrivateAPI) GetInfo(ctx context.Context) (*GetInfoResponse, error) {
 	var ret getInfoAPIResponse
-	if err := api.Do("get_info", nil, &ret); err != nil {
+	if err := api.Do(ctx, "get_info", nil, &ret); err != nil {
 		return nil, err
 	}
 	if ret.Success == 0 {
@@ -244,9 +248,9 @@ type activeOrdersAPIResponse struct {
 }
 
 // ActiveOrders 現在有効な注文一覧を取得
-func (api *PrivateAPI) ActiveOrders(param ActiveOrdersRequest) (*ActiveOrdersResponse, error) {
+func (api *PrivateAPI) ActiveOrders(ctx context.Context, param ActiveOrdersRequest) (*ActiveOrdersResponse, error) {
 	var ret activeOrdersAPIResponse
-	if err := api.Do("active_orders", param, &ret); err != nil {
+	if err := api.Do(ctx, "active_orders", param, &ret); err != nil {
 		return nil, err
 	}
 	if ret.Success == 0 {
@@ -272,9 +276,9 @@ type tradeAPIResponse struct {
 }
 
 // Trade 注文
-func (api *PrivateAPI) Trade(param TradeRequest) (*TradeResponse, error) {
+func (api *PrivateAPI) Trade(ctx context.Context, param TradeRequest) (*TradeResponse, error) {
 	var ret tradeAPIResponse
-	if err := api.Do("trade", param, &ret); err != nil {
+	if err := api.Do(ctx, "trade", param, &ret); err != nil {
 		return nil, err
 	}
 	if ret.Success == 0 {
@@ -299,9 +303,9 @@ type cancelAPIResponse struct {
 }
 
 // Cancel 注文キャンセル
-func (api *PrivateAPI) Cancel(param CancelRequest) (*CancelResponse, error) {
+func (api *PrivateAPI) Cancel(ctx context.Context, param CancelRequest) (*CancelResponse, error) {
 	var ret cancelAPIResponse
-	if err := api.Do("cancel", param, &ret); err != nil {
+	if err := api.Do(ctx, "cancel", param, &ret); err != nil {
 		return nil, err
 	}
 	if ret.Success == 0 {
@@ -326,9 +330,9 @@ type withdrawAPIResponse struct {
 }
 
 // Withdraw 資金の引き出しリクエストを送信
-func (api *PrivateAPI) Withdraw(param WithdrawRequest) (*WithdrawResponse, error) {
+func (api *PrivateAPI) Withdraw(ctx context.Context, param WithdrawRequest) (*WithdrawResponse, error) {
 	var ret withdrawAPIResponse
-	if err := api.Do("withdraw", param, &ret); err != nil {
+	if err := api.Do(ctx, "withdraw", param, &ret); err != nil {
 		return nil, err
 	}
 	if ret.Success == 0 {
@@ -350,9 +354,9 @@ type depositHistoryAPIResponse struct {
 }
 
 // DepositHistory 入金履歴を取得
-func (api *PrivateAPI) DepositHistory(param DepositHistoryRequest) (*DepositHistoryResponse, error) {
+func (api *PrivateAPI) DepositHistory(ctx context.Context, param DepositHistoryRequest) (*DepositHistoryResponse, error) {
 	var ret depositHistoryAPIResponse
-	if err := api.Do("deposit_history", param, &ret); err != nil {
+	if err := api.Do(ctx, "deposit_history", param, &ret); err != nil {
 		return nil, err
 	}
 	if ret.Success == 0 {
@@ -375,9 +379,9 @@ type withdrawHistoryAPIResponse struct {
 }
 
 // WithdrawHistory 出金履歴を取得
-func (api *PrivateAPI) WithdrawHistory(param WithdrawHistoryRequest) (*WithdrawHistoryResponse, error) {
+func (api *PrivateAPI) WithdrawHistory(ctx context.Context, param WithdrawHistoryRequest) (*WithdrawHistoryResponse, error) {
 	var ret withdrawHistoryAPIResponse
-	if err := api.Do("withdraw_history", param, &ret); err != nil {
+	if err := api.Do(ctx, "withdraw_history", param, &ret); err != nil {
 		return nil, err
 	}
 	if ret.Success == 0 {
