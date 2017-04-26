@@ -105,16 +105,16 @@ type TradingParam struct {
 	Nonce  string `url:"nonce"`
 }
 
-// NewTradingParam To make TradingParam
-func NewTradingParam(method string) TradingParam {
+// newTradingParam To make TradingParam
+func newTradingParam(method string) TradingParam {
 	return TradingParam{
 		Method: method,
 		Nonce:  newNonce(),
 	}
 }
 
-// MakeSign messageをHMAC-SHA512で署名
-func MakeSign(message string, secret string) string {
+// makeSign messageをHMAC-SHA512で署名
+func makeSign(message string, secret string) string {
 	key := []byte(secret)
 	h := hmac.New(sha512.New, key)
 	h.Write([]byte(message))
@@ -143,7 +143,7 @@ func (api *PrivateAPI) Post(tradingParam TradingParam, parameter string) (string
 	}
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Add("Key", api.Key)
-	req.Header.Add("Sign", MakeSign(encodedParams, api.Secret))
+	req.Header.Add("Sign", makeSign(encodedParams, api.Secret))
 
 	client := &http.Client{}
 	res, err := client.Do(req)
@@ -164,7 +164,7 @@ func (api *PrivateAPI) Post(tradingParam TradingParam, parameter string) (string
 func (api *PrivateAPI) GetInfo() (string, error) {
 
 	return api.Post(
-		NewTradingParam("get_info"),
+		newTradingParam("get_info"),
 		"",
 	)
 }
@@ -176,7 +176,7 @@ func (api *PrivateAPI) ActiveOrders(body ActiveOrdersRequest) (string, error) {
 		return "", err
 	}
 	return api.Post(
-		NewTradingParam("active_orders"),
+		newTradingParam("active_orders"),
 		v.Encode(),
 	)
 }
@@ -188,7 +188,7 @@ func (api *PrivateAPI) Trade(body TradeRequest) (string, error) {
 		return "", err
 	}
 	return api.Post(
-		NewTradingParam("trade"),
+		newTradingParam("trade"),
 		v.Encode(),
 	)
 }
@@ -200,7 +200,7 @@ func (api *PrivateAPI) Cancel(body CancelRequest) (string, error) {
 		return "", err
 	}
 	return api.Post(
-		NewTradingParam("cancel"),
+		newTradingParam("cancel"),
 		v.Encode(),
 	)
 }
@@ -212,7 +212,7 @@ func (api *PrivateAPI) Withdraw(body WithdrawRequest) (string, error) {
 		return "", err
 	}
 	return api.Post(
-		NewTradingParam("withdraw"),
+		newTradingParam("withdraw"),
 		v.Encode(),
 	)
 }
@@ -224,7 +224,7 @@ func (api *PrivateAPI) DepositHistory(body DepositHistoryRequest) (string, error
 		return "", err
 	}
 	return api.Post(
-		NewTradingParam("deposit_history"),
+		newTradingParam("deposit_history"),
 		v.Encode(),
 	)
 }
@@ -236,7 +236,7 @@ func (api *PrivateAPI) WithdrawHistory(body WithdrawHistoryRequest) (string, err
 		return "", err
 	}
 	return api.Post(
-		NewTradingParam("withdraw_history"),
+		newTradingParam("withdraw_history"),
 		v.Encode(),
 	)
 }
