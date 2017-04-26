@@ -5,10 +5,11 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
+
+	"encoding/json"
 
 	"github.com/google/go-querystring/query"
 )
@@ -126,20 +127,25 @@ func newNonce() string {
 	return fmt.Sprintf("%.6f", float64(time.Now().UnixNano())/float64(time.Second)-1420070400)
 }
 
-// Post API送信
-func (api *PrivateAPI) Post(tradingParam TradingParam, parameter string) (string, error) {
-	v, err := query.Values(tradingParam)
+// Do API送信
+func (api *PrivateAPI) Do(method string, param interface{}, out interface{}) error {
+	v, err := query.Values(newTradingParam(method))
 	if err != nil {
-		return "", err
+		return err
 	}
 	encodedParams := v.Encode()
-	if parameter != "" {
-		encodedParams += "&" + parameter
+
+	if param != nil {
+		pv, err := query.Values(param)
+		if err != nil {
+			return err
+		}
+		encodedParams += "&" + pv.Encode()
 	}
 
 	req, err := http.NewRequest("POST", privateEndPointURL, strings.NewReader(encodedParams))
 	if err != nil {
-		return "", err
+		return err
 	}
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Add("Key", api.Key)
@@ -148,95 +154,232 @@ func (api *PrivateAPI) Post(tradingParam TradingParam, parameter string) (string
 	client := http.DefaultClient
 	res, err := client.Do(req)
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer res.Body.Close()
 
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return "", err
-	}
+	decoder := json.NewDecoder(res.Body)
+	return decoder.Decode(out)
+}
 
-	return string(body), nil
+type APIError struct {
+	Message string
+}
+
+func (e APIError) Error() string {
+	return e.Message
+}
+
+type apiResponse struct {
+	Success int    `json:"success"`
+	Error   string `json:"error"`
+}
+
+type GetInfoResponse struct {
+	Deposit struct {
+		Btc   float64 `json:"btc"`
+		Jpy   int     `json:"jpy"`
+		Kaori float64 `json:"kaori"`
+		Mona  int     `json:"mona"`
+		Xem   float64 `json:"xem"`
+	} `json:"deposit"`
+	Funds struct {
+		Btc   float64 `json:"btc"`
+		Jpy   int     `json:"jpy"`
+		Kaori float64 `json:"kaori"`
+		Mona  int     `json:"mona"`
+		Xem   float64 `json:"xem"`
+	} `json:"funds"`
+	OpenOrders int `json:"open_orders"`
+	Rights     struct {
+		IDInfo       int `json:"id_info"`
+		Info         int `json:"info"`
+		PersonalInfo int `json:"personal_info"`
+		Trade        int `json:"trade"`
+		Withdraw     int `json:"withdraw"`
+	} `json:"rights"`
+	ServerTime int `json:"server_time"`
+	TradeCount int `json:"trade_count"`
+}
+
+type getInfoAPIResponse struct {
+	apiResponse
+	Response *GetInfoResponse `json:"return"`
 }
 
 // GetInfo 現在の残高（余力および残高）、APIキーの権限、過去のトレード数、アクティブな注文数、サーバーのタイムスタンプを取得
-func (api *PrivateAPI) GetInfo() (string, error) {
+func (api *PrivateAPI) GetInfo() (*GetInfoResponse, error) {
+	var ret getInfoAPIResponse
+	if err := api.Do("get_info", nil, &ret); err != nil {
+		return nil, err
+	}
+	if ret.Success == 0 {
+		return nil, APIError{Message: ret.Error}
+	}
+	return ret.Response, nil
+}
 
-	return api.Post(
-		newTradingParam("get_info"),
-		"",
-	)
+type ActiveOrdersResponse struct {
+	ActiveOrders map[string]struct {
+		CurrencyPair string  `json:"currency_pair"`
+		Action       string  `json:"action"`
+		Amount       float64 `json:"amount"`
+		Price        int     `json:"price"`
+		Timestamp    int     `json:"timestamp"`
+	} `json:"active_orders"`
+	TokenActiveOrders map[string]struct {
+		CurrencyPair string  `json:"currency_pair"`
+		Action       string  `json:"action"`
+		Amount       float64 `json:"amount"`
+		Price        int     `json:"price"`
+		Timestamp    int     `json:"timestamp"`
+	} `json:"token_active_orders"`
+}
+
+type activeOrdersAPIResponse struct {
+	apiResponse
+	Response *ActiveOrdersResponse `json:"return"`
 }
 
 // ActiveOrders 現在有効な注文一覧を取得
-func (api *PrivateAPI) ActiveOrders(body ActiveOrdersRequest) (string, error) {
-	v, err := query.Values(body)
-	if err != nil {
-		return "", err
+func (api *PrivateAPI) ActiveOrders(param ActiveOrdersRequest) (*ActiveOrdersResponse, error) {
+	var ret activeOrdersAPIResponse
+	if err := api.Do("active_orders", param, &ret); err != nil {
+		return nil, err
 	}
-	return api.Post(
-		newTradingParam("active_orders"),
-		v.Encode(),
-	)
+	if ret.Success == 0 {
+		return nil, APIError{Message: ret.Error}
+	}
+	return ret.Response, nil
+}
+
+type TradeResponse struct {
+	Received float64 `json:"received"`
+	Remains  int     `json:"remains"`
+	OrderID  int     `json:"order_id"`
+	Funds    struct {
+		Jpy  int     `json:"jpy"`
+		Btc  float64 `json:"btc"`
+		Mona int     `json:"mona"`
+	} `json:"funds"`
+}
+
+type tradeAPIResponse struct {
+	apiResponse
+	Response *TradeResponse `json:"return"`
 }
 
 // Trade 注文
-func (api *PrivateAPI) Trade(body TradeRequest) (string, error) {
-	v, err := query.Values(body)
-	if err != nil {
-		return "", err
+func (api *PrivateAPI) Trade(param TradeRequest) (*TradeResponse, error) {
+	var ret tradeAPIResponse
+	if err := api.Do("trade", param, &ret); err != nil {
+		return nil, err
 	}
-	return api.Post(
-		newTradingParam("trade"),
-		v.Encode(),
-	)
+	if ret.Success == 0 {
+		return nil, APIError{Message: ret.Error}
+	}
+	return ret.Response, nil
+}
+
+type CancelResponse struct {
+	Funds struct {
+		Btc   float64 `json:"btc"`
+		Jpy   int     `json:"jpy"`
+		Kaori float64 `json:"kaori"`
+		Mona  int     `json:"mona"`
+	} `json:"funds"`
+	OrderID int `json:"order_id"`
+}
+
+type cancelAPIResponse struct {
+	apiResponse
+	Response *CancelResponse `json:"return"`
 }
 
 // Cancel 注文キャンセル
-func (api *PrivateAPI) Cancel(body CancelRequest) (string, error) {
-	v, err := query.Values(body)
-	if err != nil {
-		return "", err
+func (api *PrivateAPI) Cancel(param CancelRequest) (*CancelResponse, error) {
+	var ret cancelAPIResponse
+	if err := api.Do("cancel", param, &ret); err != nil {
+		return nil, err
 	}
-	return api.Post(
-		newTradingParam("cancel"),
-		v.Encode(),
-	)
+	if ret.Success == 0 {
+		return nil, APIError{Message: ret.Error}
+	}
+	return ret.Response, nil
+}
+
+type WithdrawResponse struct {
+	Txid  string `json:"txid"`
+	Funds struct {
+		Jpy  int     `json:"jpy"`
+		Btc  float64 `json:"btc"`
+		Xem  float64 `json:"xem"`
+		Mona int     `json:"mona"`
+	} `json:"funds"`
+}
+
+type withdrawAPIResponse struct {
+	apiResponse
+	Response *WithdrawResponse `json:"return"`
 }
 
 // Withdraw 資金の引き出しリクエストを送信
-func (api *PrivateAPI) Withdraw(body WithdrawRequest) (string, error) {
-	v, err := query.Values(body)
-	if err != nil {
-		return "", err
+func (api *PrivateAPI) Withdraw(param WithdrawRequest) (*WithdrawResponse, error) {
+	var ret withdrawAPIResponse
+	if err := api.Do("withdraw", param, &ret); err != nil {
+		return nil, err
 	}
-	return api.Post(
-		newTradingParam("withdraw"),
-		v.Encode(),
-	)
+	if ret.Success == 0 {
+		return nil, APIError{Message: ret.Error}
+	}
+	return ret.Response, nil
+}
+
+type DepositHistoryResponse map[string]struct {
+	Timestamp int     `json:"timestamp"`
+	Address   string  `json:"address"`
+	Amount    float64 `json:"amount"`
+	Txid      string  `json:"txid"`
+}
+
+type depositHistoryAPIResponse struct {
+	apiResponse
+	Response *DepositHistoryResponse `json:"return"`
 }
 
 // DepositHistory 入金履歴を取得
-func (api *PrivateAPI) DepositHistory(body DepositHistoryRequest) (string, error) {
-	v, err := query.Values(body)
-	if err != nil {
-		return "", err
+func (api *PrivateAPI) DepositHistory(param DepositHistoryRequest) (*DepositHistoryResponse, error) {
+	var ret depositHistoryAPIResponse
+	if err := api.Do("deposit_history", param, &ret); err != nil {
+		return nil, err
 	}
-	return api.Post(
-		newTradingParam("deposit_history"),
-		v.Encode(),
-	)
+	if ret.Success == 0 {
+		return nil, APIError{Message: ret.Error}
+	}
+	return ret.Response, nil
+}
+
+type WithdrawHistoryResponse map[string]struct {
+	Timestamp int     `json:"timestamp"`
+	Address   string  `json:"address"`
+	Amount    int     `json:"amount"`
+	Fee       float64 `json:"fee"`
+	Txid      string  `json:"txid"`
+}
+
+type withdrawHistoryAPIResponse struct {
+	apiResponse
+	Response *WithdrawHistoryResponse `json:"return"`
 }
 
 // WithdrawHistory 出金履歴を取得
-func (api *PrivateAPI) WithdrawHistory(body WithdrawHistoryRequest) (string, error) {
-	v, err := query.Values(body)
-	if err != nil {
-		return "", err
+func (api *PrivateAPI) WithdrawHistory(param WithdrawHistoryRequest) (*WithdrawHistoryResponse, error) {
+	var ret withdrawHistoryAPIResponse
+	if err := api.Do("withdraw_history", param, &ret); err != nil {
+		return nil, err
 	}
-	return api.Post(
-		newTradingParam("withdraw_history"),
-		v.Encode(),
-	)
+	if ret.Success == 0 {
+		return nil, APIError{Message: ret.Error}
+	}
+	return ret.Response, nil
 }
