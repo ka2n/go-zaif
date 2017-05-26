@@ -1,9 +1,14 @@
 package zaif
 
 import (
+	"context"
+	"sync"
+
 	"golang.org/x/net/websocket"
+	"golang.org/x/sync/errgroup"
 )
 
+// StreamResponse stream API response
 type StreamResponse struct {
 	Asks        [][]float64 `json:"asks"`
 	Bids        [][]float64 `json:"bids"`
@@ -25,11 +30,87 @@ type StreamResponse struct {
 	Timestamp    string `json:"timestamp"`
 }
 
-func (api TmpPublicAPI) Stream(pair string) (*websocket.Conn, error) {
-	return websocket.Dial("wss://ws.zaif.jp:8888/stream?currency_pair="+pair, "", "http://localhost")
+// NewStream stream API用のクライアントを作る
+func NewStream() Stream {
+	return Stream{
+		subscriptions: make(map[string]chan *StreamResponse),
+		connections:   make(map[string]*websocket.Conn),
+	}
 }
 
-func (api TmpPublicAPI) ReceiveStream(conn *websocket.Conn) (*StreamResponse, error) {
-	var res StreamResponse
-	return &res, websocket.JSON.Receive(conn, &res)
+// Stream client
+type Stream struct {
+	subscriptions map[string]chan *StreamResponse
+	connections   map[string]*websocket.Conn
+	mu            sync.Mutex
+
+	Error error
+}
+
+// AddSubscription 指定ペアのsubscribe
+// resはClose()が呼ばれた時にcloseされます
+func (s *Stream) AddSubscription(pair string, res chan *StreamResponse) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.subscriptions[pair] = res
+	return nil
+}
+
+// Receive stream APIからデータを受信開始する
+func (s *Stream) Receive(ctx context.Context) error {
+	// Make connections
+	s.mu.Lock()
+	for k := range s.subscriptions {
+		conn, err := websocket.Dial("wss://ws.zaif.jp:8888/stream?currency_pair="+k, "", "http://localhost")
+		if err != nil {
+			s.mu.Unlock()
+			return err
+		}
+		s.connections[k] = conn
+	}
+
+	// Receiving responses
+	wg, ctx := errgroup.WithContext(ctx)
+	for pair, conn := range s.connections {
+		conn := conn
+		c := s.subscriptions[pair]
+
+		wg.Go(func() error {
+			for {
+				if ctx.Err() != nil {
+					return ctx.Err()
+				}
+				var res StreamResponse
+				if err := websocket.JSON.Receive(conn, &res); err != nil {
+					return err
+				}
+				if ctx.Err() != nil {
+					return ctx.Err()
+				}
+				c <- &res
+			}
+		})
+	}
+
+	s.mu.Unlock()
+	return wg.Wait()
+}
+
+// Close connections
+func (s *Stream) Close() error {
+	var err error
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, sb := range s.connections {
+		sb.Close()
+	}
+
+	for k, c := range s.subscriptions {
+		close(c)
+		s.subscriptions[k] = nil
+		s.connections[k] = nil
+	}
+
+	return err
 }
