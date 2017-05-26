@@ -375,11 +375,11 @@ type WithdrawHistoryResponse struct {
 
 type withdrawHistoryAPIResponse struct {
 	apiResponse
-	Response *WithdrawHistoryResponse `json:"return"`
+	Response map[string]WithdrawHistoryResponse `json:"return"`
 }
 
 // WithdrawHistory 出金履歴を取得
-func (api *PrivateAPI) WithdrawHistory(ctx context.Context, param WithdrawHistoryRequest) (*WithdrawHistoryResponse, error) {
+func (api *PrivateAPI) WithdrawHistory(ctx context.Context, param WithdrawHistoryRequest) (map[string]WithdrawHistoryResponse, error) {
 	var ret withdrawHistoryAPIResponse
 	if err := api.Do(ctx, "withdraw_history", param, &ret); err != nil {
 		return nil, err
