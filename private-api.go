@@ -231,14 +231,14 @@ type ActiveOrdersResponse struct {
 		Action       string  `json:"action"`
 		Amount       float64 `json:"amount"`
 		Price        int     `json:"price"`
-		Timestamp    int     `json:"timestamp"`
+		Timestamp    int     `json:"timestamp,string"`
 	} `json:"active_orders"`
 	TokenActiveOrders map[string]struct {
 		CurrencyPair string  `json:"currency_pair"`
 		Action       string  `json:"action"`
 		Amount       float64 `json:"amount"`
 		Price        int     `json:"price"`
-		Timestamp    int     `json:"timestamp"`
+		Timestamp    int     `json:"timestamp,string"`
 	} `json:"token_active_orders"`
 }
 
@@ -342,7 +342,7 @@ func (api *PrivateAPI) Withdraw(ctx context.Context, param WithdrawRequest) (*Wi
 }
 
 type DepositHistoryResponse map[string]struct {
-	Timestamp int     `json:"timestamp"`
+	Timestamp int     `json:"timestamp,string"`
 	Address   string  `json:"address"`
 	Amount    float64 `json:"amount"`
 	Txid      string  `json:"txid"`
@@ -365,10 +365,10 @@ func (api *PrivateAPI) DepositHistory(ctx context.Context, param DepositHistoryR
 	return ret.Response, nil
 }
 
-type WithdrawHistoryResponse map[string]struct {
-	Timestamp int     `json:"timestamp"`
+type WithdrawHistoryResponse struct {
+	Timestamp int     `json:"timestamp,string"`
 	Address   string  `json:"address"`
-	Amount    int     `json:"amount"`
+	Amount    float64 `json:"amount"`
 	Fee       float64 `json:"fee"`
 	Txid      string  `json:"txid"`
 }

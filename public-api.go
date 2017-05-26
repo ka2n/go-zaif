@@ -1,7 +1,9 @@
 package zaif
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 )
@@ -24,7 +26,7 @@ type Ticker struct {
 	Last   float64 `json:"last"`   // 終値
 	High   float64 `json:"high"`   // 過去24時間の高値
 	Low    float64 `json:"low"`    // 過去24時間の安値
-	Vmap   float64 `json:"vmap"`   // 過去24時間の加重平均
+	Vwap   float64 `json:"vwap"`   // 過去24時間の加重平均
 	Volume float64 `json:"volume"` // 過去24時間の出来高
 	Bid    float64 `json:"bid"`    // 買気配値
 	Ask    float64 `json:"ask"`    // 売気配値
@@ -48,6 +50,41 @@ type Depth struct {
 	Asks []Ask `json:"asks"`
 }
 
+type CurrencyPair struct {
+	Name         string  `json:"name"`           // 通貨ペアの名前
+	Title        string  `json:"title"`          // 通貨ペアのタイトル
+	CurrencyPair string  `json:"currency_pair"`  // 通貨ペアのシステム文字列
+	Description  string  `json:"description"`    // 通貨ペアの詳細
+	ItemUnitStep float64 `json:"item_unit_step"` // アイテム通貨最小値
+	ItemUnitMin  float64 `json:"item_unit_min"`  // アイテム通貨入力単位
+	AuxUnitStep  float64 `json:"aux_unit_step"`  // 相手通貨入力単位
+	AuxUnitMin   float64 `json:"aux_unit_min"`   // 相手通貨最小値
+	IsToken      bool    `json:"is_token"`       // token種別
+	EventNumber  int     `json:"event_number"`   // イベントトークンの場合、0以外
+}
+
+func (api TmpPublicAPI) CurrencyPairs(ctx context.Context, currencyPair string) ([]CurrencyPair, error) {
+	req, err := http.NewRequest("GET", publicEndPointURL+"/currency_pairs/"+currencyPair, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req = req.WithContext(ctx)
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("bad status: %d", res.StatusCode)
+	}
+
+	var pair []CurrencyPair
+	decoder := json.NewDecoder(res.Body)
+	return pair, decoder.Decode(&pair)
+}
+
 // LastPrice 終値取得
 func (api TmpPublicAPI) LastPrice(currencyPair string) (dat LastPrice, err error) {
 	res, err := http.Get(publicEndPointURL + "/last_price/" + currencyPair)
@@ -64,8 +101,15 @@ func (api TmpPublicAPI) LastPrice(currencyPair string) (dat LastPrice, err error
 }
 
 // Ticker ティッカー取得
-func (api TmpPublicAPI) Ticker(currencyPair string) (dat Ticker, err error) {
-	res, err := http.Get(publicEndPointURL + "/ticker/" + currencyPair)
+func (api TmpPublicAPI) Ticker(ctx context.Context, currencyPair string) (dat Ticker, err error) {
+	req, err := http.NewRequest("GET", publicEndPointURL+"/ticker/"+currencyPair, nil)
+	if err != nil {
+		return Ticker{}, nil
+	}
+
+	req = req.WithContext(ctx)
+
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return Ticker{}, err
 	}
