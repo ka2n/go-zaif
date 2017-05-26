@@ -38,11 +38,11 @@ type ActiveOrdersRequest struct {
 
 // TradeRequest Params of Trade
 type TradeRequest struct {
-	CurrencyPair string  `url:"currency_pair"`
-	Action       string  `url:"action"`
-	Price        int     `url:"price"`
-	Amount       float32 `url:"amount"`
-	Limit        bool    `url:"limit,omitempty"`
+	CurrencyPair string `url:"currency_pair"`
+	Action       string `url:"action"`
+	Price        string `url:"price"`
+	Amount       string `url:"amount"`
+	Limit        bool   `url:"limit,omitempty"`
 }
 
 // CancelRequest Params of Cancel
@@ -52,10 +52,11 @@ type CancelRequest struct {
 
 // WithdrawRequest Params of Withdraw
 type WithdrawRequest struct {
-	Currency string  `url:"currency"`
-	Address  string  `url:"address"`
-	Amount   float32 `url:"amount"`
-	OptFee   float32 `url:"opt_fee,omitempty"`
+	Currency string `url:"currency"`
+	Address  string `url:"address"`
+	Amount   string `url:"amount"`
+	Message  string `url:"message,omitempty"`
+	OptFee   string `url:"opt_fee,omitempty"`
 }
 
 // TradeHistoryRequest Params of TradeHistory
