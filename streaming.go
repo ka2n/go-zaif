@@ -78,14 +78,14 @@ func (s *Stream) Receive(ctx context.Context) error {
 		wg.Go(func() error {
 			for {
 				if ctx.Err() != nil {
-					return ctx.Err()
+					return nil
 				}
 				var res StreamResponse
 				if err := websocket.JSON.Receive(conn, &res); err != nil {
 					return err
 				}
 				if ctx.Err() != nil {
-					return ctx.Err()
+					return nil
 				}
 				c <- &res
 			}
