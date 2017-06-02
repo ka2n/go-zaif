@@ -2,6 +2,7 @@ package zaif
 
 import (
 	"context"
+	"errors"
 	"sync"
 
 	"golang.org/x/net/websocket"
@@ -42,6 +43,7 @@ func NewStream() Stream {
 type Stream struct {
 	subscriptions map[string]chan *StreamResponse
 	connections   map[string]*websocket.Conn
+	connected     bool
 	mu            sync.Mutex
 
 	Error error
@@ -60,9 +62,19 @@ func (s *Stream) AddSubscription(pair string, res chan *StreamResponse) error {
 func (s *Stream) Receive(ctx context.Context) error {
 	// Make connections
 	s.mu.Lock()
+	if s.connected {
+		return errors.New("already started")
+	}
+	s.connected = true
 	for k := range s.subscriptions {
 		conn, err := websocket.Dial("wss://ws.zaif.jp:8888/stream?currency_pair="+k, "", "http://localhost")
 		if err != nil {
+			for _, conn := range s.connections {
+				conn.Close()
+			}
+			for _, sub := range s.subscriptions {
+				close(sub)
+			}
 			s.mu.Unlock()
 			return err
 		}
@@ -77,20 +89,44 @@ func (s *Stream) Receive(ctx context.Context) error {
 
 		wg.Go(func() error {
 			for {
+				// if context already done, finish
 				if ctx.Err() != nil {
 					return nil
 				}
+
+				// Wait data...
 				var res StreamResponse
 				if err := websocket.JSON.Receive(conn, &res); err != nil {
+					// this is not an error actually
+					if ctx.Err() != nil {
+						return nil
+					}
 					return err
 				}
-				if ctx.Err() != nil {
-					return nil
+
+				// Publish to subscribers
+				s.mu.Lock()
+				if s.connected {
+					c <- &res
 				}
-				c <- &res
+				s.mu.Unlock()
 			}
 		})
 	}
+
+	// Wait context to done
+	// cleanup connections
+	wg.Go(func() error {
+		<-ctx.Done()
+		s.mu.Lock()
+		defer s.mu.Unlock()
+
+		for _, sb := range s.connections {
+			sb.Close()
+		}
+		s.connections = map[string]*websocket.Conn{}
+		return nil
+	})
 
 	s.mu.Unlock()
 	return wg.Wait()
@@ -102,15 +138,11 @@ func (s *Stream) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	for _, sb := range s.connections {
-		sb.Close()
-	}
-
 	for k, c := range s.subscriptions {
 		close(c)
 		s.subscriptions[k] = nil
 		s.connections[k] = nil
 	}
-
+	s.connected = false
 	return err
 }
