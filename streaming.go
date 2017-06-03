@@ -5,7 +5,7 @@ import (
 	"errors"
 	"sync"
 
-	"golang.org/x/net/websocket"
+	"github.com/gorilla/websocket"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -67,7 +67,7 @@ func (s *Stream) Receive(ctx context.Context) error {
 	}
 	s.connected = true
 	for k := range s.subscriptions {
-		conn, err := websocket.Dial("wss://ws.zaif.jp:8888/stream?currency_pair="+k, "", "http://localhost")
+		conn, _, err := websocket.DefaultDialer.Dial("wss://ws.zaif.jp:8888/stream?currency_pair="+k, nil)
 		if err != nil {
 			for _, conn := range s.connections {
 				conn.Close()
@@ -96,7 +96,7 @@ func (s *Stream) Receive(ctx context.Context) error {
 
 				// Wait data...
 				var res StreamResponse
-				if err := websocket.JSON.Receive(conn, &res); err != nil {
+				if err := conn.ReadJSON(&res); err != nil {
 					// this is not an error actually
 					if ctx.Err() != nil {
 						return nil
