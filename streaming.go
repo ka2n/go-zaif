@@ -91,7 +91,7 @@ func (s *Stream) Receive(ctx context.Context) error {
 		c := s.subscriptions[pair]
 
 		wg.Go(func() error {
-			tick := time.NewTicker(time.Minute)
+			tick := time.NewTicker(time.Second * 20)
 			defer tick.Stop()
 			for {
 				select {
