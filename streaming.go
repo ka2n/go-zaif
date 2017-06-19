@@ -114,22 +114,18 @@ func (s *Stream) Receive(ctx context.Context) error {
 		})
 	}
 
-	// Wait context to done
-	// cleanup connections
-	wg.Go(func() error {
-		<-ctx.Done()
-		s.mu.Lock()
-		defer s.mu.Unlock()
-
-		for _, sb := range s.connections {
-			sb.Close()
-		}
-		s.connections = map[string]*websocket.Conn{}
-		return nil
-	})
-
 	s.mu.Unlock()
-	return wg.Wait()
+	err := wg.Wait()
+
+	// Cleanup connections
+	s.mu.Lock()
+	for k, conn := range s.connections {
+		conn.Close()
+		delete(s.connections, k)
+	}
+	s.mu.Unlock()
+
+	return err
 }
 
 // Close connections
@@ -141,7 +137,7 @@ func (s *Stream) Close() error {
 	for k, c := range s.subscriptions {
 		close(c)
 		s.subscriptions[k] = nil
-		s.connections[k] = nil
+		delete(s.subscriptions, k)
 	}
 	s.connected = false
 	return err
