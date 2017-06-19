@@ -2,10 +2,10 @@ package zaif
 
 import (
 	"context"
-	"errors"
 	"sync"
 
 	"github.com/gorilla/websocket"
+	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -101,7 +101,7 @@ func (s *Stream) Receive(ctx context.Context) error {
 					if ctx.Err() != nil {
 						return nil
 					}
-					return err
+					return errors.Wrap(err, "pair: "+pair)
 				}
 
 				// Publish to subscribers
