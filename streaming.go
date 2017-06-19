@@ -4,6 +4,8 @@ import (
 	"context"
 	"sync"
 
+	"time"
+
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
@@ -84,8 +86,24 @@ func (s *Stream) Receive(ctx context.Context) error {
 	// Receiving responses
 	wg, ctx := errgroup.WithContext(ctx)
 	for pair, conn := range s.connections {
+		pair := pair
 		conn := conn
 		c := s.subscriptions[pair]
+
+		wg.Go(func() error {
+			tick := time.NewTicker(time.Minute)
+			defer tick.Stop()
+			for {
+				select {
+				case <-tick.C:
+					if err := conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+						return errors.Wrap(err, "pair: "+pair)
+					}
+				case <-ctx.Done():
+					return nil
+				}
+			}
+		})
 
 		wg.Go(func() error {
 			for {
@@ -97,11 +115,11 @@ func (s *Stream) Receive(ctx context.Context) error {
 				// Wait data...
 				var res StreamResponse
 				if err := conn.ReadJSON(&res); err != nil {
-					// this is not an error actually
-					if ctx.Err() != nil {
-						return nil
-					}
 					return errors.Wrap(err, "pair: "+pair)
+				}
+
+				if ctx.Err() != nil {
+					return nil
 				}
 
 				// Publish to subscribers
